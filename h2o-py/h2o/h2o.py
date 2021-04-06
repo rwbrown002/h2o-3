@@ -32,6 +32,7 @@ from .estimators.word2vec import H2OWord2vecEstimator
 from .estimators.isolation_forest import H2OIsolationForestEstimator
 from .transforms.decomposition import H2OSVD
 from .estimators.xgboost import H2OXGBoostEstimator
+from .estimators.infogram import H2OInfoGramEstimator
 from .estimators.deeplearning import H2OAutoEncoderEstimator, H2ODeepLearningEstimator
 from .estimators.extended_isolation_forest import H2OExtendedIsolationForestEstimator
 from .exceptions import H2OConnectionError, H2OValueError
