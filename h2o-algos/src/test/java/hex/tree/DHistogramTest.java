@@ -22,7 +22,7 @@ public class DHistogramTest extends TestUtil {
   public void showBinarySearchFailsOnNegativeZero() {
     final double val = -0.0d;
     final double[] ary = new double[]{0.0};
-    assertTrue(ary[0] == val);
+    assertEquals(ary[0], val, 0);
     int pos = Arrays.binarySearch(ary, val);
     assertEquals(-1 , pos); // -0.0d was not found
     // it is because binarySearch internally uses doubleToLongBits
@@ -37,7 +37,7 @@ public class DHistogramTest extends TestUtil {
       DKV.put(hq);
       Scope.track_generic(hq);
 
-      DHistogram histo = new DHistogram("test", 20, 1024, (byte) 1, -1, 2, false, -0.001,
+      DHistogram histo = new DHistogram("test", 20, 1024, (byte) 1, -1, 2, false, false, -0.001,
               SharedTreeModel.SharedTreeParameters.HistogramType.QuantilesGlobal, 42L, hq._key, null, false);
       histo.init();
 
@@ -59,7 +59,7 @@ public class DHistogramTest extends TestUtil {
       DKV.put(hq);
       Scope.track_generic(hq);
 
-      DHistogram histo = new DHistogram("test", 20, 1024, (byte) 1, -1, 2, false, -0.001,
+      DHistogram histo = new DHistogram("test", 20, 1024, (byte) 1, -1, 2, false, false, -0.001,
               SharedTreeModel.SharedTreeParameters.HistogramType.QuantilesGlobal, 42L, hq._key, null, false);
       histo.init();
 
@@ -86,7 +86,7 @@ public class DHistogramTest extends TestUtil {
       assertEquals(maxEx, values[values.length - 1], 1e-8);
       values[values.length - 1] = maxEx - 1e-8;
 
-      DHistogram histoRand = new DHistogram("rand", 20, 1024, (byte) 0, min, maxEx, false, -0.001,
+      DHistogram histoRand = new DHistogram("rand", 20, 1024, (byte) 0, min, maxEx, false, false, -0.001,
               SharedTreeModel.SharedTreeParameters.HistogramType.Random, 42L, null, null, false);
       histoRand.init();
 
@@ -99,7 +99,7 @@ public class DHistogramTest extends TestUtil {
       DHistogram.HistoQuantiles hq = new DHistogram.HistoQuantiles(Key.make(), splitPointsQuant);
       DKV.put(hq);
       Scope.track_generic(hq);
-      DHistogram histoQuant = new DHistogram("quant", 20, 1024, (byte) 0, min, maxEx, false, -0.001,
+      DHistogram histoQuant = new DHistogram("quant", 20, 1024, (byte) 0, min, maxEx, false, false, -0.001,
               SharedTreeModel.SharedTreeParameters.HistogramType.QuantilesGlobal, 42L, hq._key, null, false);
       histoQuant.init();
 
