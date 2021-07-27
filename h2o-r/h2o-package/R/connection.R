@@ -310,14 +310,10 @@ h2o.init <- function(ip = "localhost", port = 54321, name = NA_character_, start
 #' \dontrun{
 #' library(h2o)
 #' # Try to connect to a H2O instance running at http://localhost:54321/cluster_X
-#' # If not found, start a local H2O instance from R with the default settings.
 #' #h2o.connect(ip = "localhost", port = 54321, context_path = "cluster_X")
 #' # Or
 #' #config = list(ip = "localhost", port = 54321, context_path = "cluster_X")
 #' #h2o.connect(config = config)
-#'
-#' # Skip strict version check during connecting to the instance
-#' #h2o.connect(config = c(strict_version_check = FALSE, config))
 #' }
 #' @export
 h2o.connect <- function(ip = "localhost", port = 54321, strict_version_check = TRUE, proxy = NA_character_,
@@ -335,7 +331,7 @@ h2o.connect <- function(ip = "localhost", port = 54321, strict_version_check = T
    do.call(h2o.init, c(startH2O=FALSE, config))
  } else {
    # Pass arguments directly
-   h2o.init(ip=ip, port=port, strict_version_check=strict_version_check,
+   h2o.init(ip=ip, port=port, startH2O=FALSE, strict_version_check=strict_version_check,
             proxy=proxy, https=https, cacert=cacert, insecure=insecure, password=password,
             username=username, use_spnego=use_spnego, cookies=cookies, context_path=context_path)
  }
