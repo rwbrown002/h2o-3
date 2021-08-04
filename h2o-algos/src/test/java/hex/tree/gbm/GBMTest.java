@@ -14,7 +14,9 @@ import hex.genmodel.easy.prediction.MultinomialModelPrediction;
 import hex.genmodel.tools.PredictCsv;
 import hex.genmodel.utils.DistributionFamily;
 import hex.tree.Constraints;
+import hex.tree.SharedTree;
 import hex.tree.SharedTreeModel;
+import org.hamcrest.number.OrderingComparison;
 import org.junit.*;
 import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
@@ -37,6 +39,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import static hex.genmodel.utils.DistributionFamily.*;
+import static junit.framework.TestCase.assertTrue;
 import static org.junit.Assert.*;
 import static water.fvec.FVecFactory.makeByteVec;
 
@@ -69,9 +72,9 @@ public class GBMTest extends TestUtil {
     if ("EmulateConstraints".equals(test_type)) {
       return new GBMModel.GBMParameters() {
         @Override
-        Constraints emptyConstraints(Frame f) {
+        Constraints emptyConstraints(int numCols) {
           if (_distribution == DistributionFamily.gaussian || _distribution == DistributionFamily.bernoulli || _distribution == DistributionFamily.tweedie) {
-            return new Constraints(new int[f.numCols()], DistributionFactory.getDistribution(this), true);
+            return new Constraints(new int[numCols], DistributionFactory.getDistribution(this), true);
           } else 
             return null;
         }
@@ -2134,7 +2137,7 @@ public class GBMTest extends TestUtil {
 
       // Build a POJO, validate same results
       Assert.assertTrue(gbm.testJavaScoring(pred, res, 1e-15));
-      Assert.assertEquals( 10.69611, ((ModelMetricsRegression)gbm._output._training_metrics)._mean_residual_deviance,1e-1);
+      Assert.assertEquals( 10.89264, ((ModelMetricsRegression)gbm._output._training_metrics)._mean_residual_deviance,1e-1);
 
     } finally {
       parms._train.remove();
@@ -4267,12 +4270,19 @@ public class GBMTest extends TestUtil {
       parms._stopping_metric = ScoreKeeper.StoppingMetric.AUC;
       parms._stopping_rounds = 1;
       parms._auc_type = MultinomialAucType.MACRO_OVO;
+      parms._seed = 42;
+      parms._score_tree_interval = 1;
 
       gbm = new GBM(parms).trainModel().get();
+
+      // with learn_rate = 1 and min_rows = 1 we are forcing the trees to overfit on the training dataset
+      // we should see the training stop almost immediately (after 2 trees)
+      assertThat(gbm._output._ntrees, OrderingComparison.lessThan(5));
+
       ScoreKeeper[] history = gbm._output._scored_train;
       double previous = Double.MIN_VALUE;
-      for(ScoreKeeper sk : history){
-        assert sk._AUC >= previous;
+      for (ScoreKeeper sk : history) {
+        assertThat(sk._AUC, OrderingComparison.greaterThanOrEqualTo(previous)); 
         previous = sk._AUC;
       }
     } finally {
@@ -4347,6 +4357,139 @@ public class GBMTest extends TestUtil {
     } finally {
       Scope.exit();
     }
+  }
+
+  @Test
+  public void testHStatistic() {
+    Frame fr = null;
+    GBMModel model = null;
+    Scope.enter();
+    try {
+      Frame f = Scope.track(parse_test_file("smalldata/logreg/prostate.csv"));
+      f.replace(f.find("CAPSULE"), f.vec("CAPSULE").toNumericVec());
+      Scope.track(f);
+
+      GBMModel.GBMParameters parms = makeGBMParameters();
+      parms._response_column = "CAPSULE";
+      parms._train = f._key;
+      parms._ntrees = 3;
+      parms._seed = 1234L;
+
+      model = new GBM(parms).trainModel().get();
+      double h = model.getFriedmanPopescusH(f, new String[] {"GLEASON","VOL"});
+      assertTrue(Double.isNaN(h) || (h >= 0.0 && h <= 1.0));
+    } finally {
+      if (model != null) model.delete();
+      if (fr  != null) fr.remove();
+      Scope.exit();
+    }
+  }
+
+  @Test
+  public void testMonotoneConstraintsTriggerStrictlyReproducibleHistograms() {
+    GBMModel.GBMParameters p = makeGBMParameters();
+    p._distribution = gaussian;
+    if (test_type.equals("EmulateConstraints")) {
+      assertTrue(p.forceStrictlyReproducibleHistograms());
+    } else {
+      assertFalse(p.forceStrictlyReproducibleHistograms());
+    }
+  }
+
+  @Test
+  public void testReproducibilityWithNAs() {
+    Assume.assumeTrue(H2O.CLOUD.size() == 1); // don't run on multinode (too long)
+    checkReproducibility(0.5, Double.NaN);
+  }
+
+  @Test
+  public void testReproducibilityWithNAsSubstituted() { // NAs are substituted for an outlier value 
+    Assume.assumeTrue(H2O.CLOUD.size() == 1); // don't run on multinode (too long)
+    checkReproducibility(0.5, 10.0);
+  }
+
+  @Test
+  public void testReproducibilityWithoutNAs() {
+    Assume.assumeTrue(H2O.CLOUD.size() == 1); // don't run on multinode (too long)
+    checkReproducibility(1.0 + Double.MIN_VALUE, Double.NaN);
+  }
+
+  @Test
+  public void testStrictReproducibility() {
+    Assume.assumeTrue(H2O.CLOUD.size() == 1); // don't run on multinode (too long)
+
+    SharedTree.SharedTreeDebugParams debugParms = new SharedTree.SharedTreeDebugParams();
+    debugParms._reproducible_histos = true; // use fully reproducible (deterministic) histograms
+    debugParms._keep_orig_histo_precision = true; // do not reduce precision of histograms in the final step
+    
+    checkReproducibility(0.9, Double.NaN, debugParms);
+  }
+
+  private void checkReproducibility(double thresholdNA, double NA) {
+    checkReproducibility(thresholdNA, NA, null);
+  }
+  
+  private void checkReproducibility(double thresholdNA, double NA, SharedTree.SharedTreeDebugParams debugParms) {
+    GBMModel model = null;
+    Scope.enter();
+    try {
+      Vec randomCol = makeRandomVec(1000000, 256, thresholdNA, NA);
+      Frame f = new Frame(Key.make("random_frame"));
+      f.add("C1", randomCol);
+      f.add("C2", randomCol);
+      f.add("response", makeRandomVec(randomCol.length(), randomCol.nChunks(), 1.0 + Double.MIN_VALUE, NA));
+      Scope.track(f);
+      DKV.put(f);
+
+      GBMModel.GBMParameters parms = makeGBMParameters();
+      parms._response_column = "response";
+      parms._train = f._key;
+      parms._ntrees = 1;
+      parms._seed = 1234L;
+
+      String pojo = null;
+      for (int i = 0; i < 10; i++) {
+        GBM gbm = new GBM(parms);
+        if (debugParms != null)
+          gbm.setDebugParams(debugParms);
+        model = gbm.trainModel().get();
+
+        String modelId = model._key.toString();
+        String newPojo = model
+                .toJava(false, false)
+                .replaceAll("AUTOGENERATED BY H2O at.*", "") // get rid of timestamp
+                .replaceAll(modelId, "");
+        model.delete();
+
+        if (i > 0)
+          assertEquals("Different in pojo found after in attempt #" + i, pojo, newPojo);
+        pojo = newPojo;
+      }
+    } finally {
+      if (model != null) model.delete();
+      Scope.exit();
+    }
+  }
+  
+  private static Vec makeRandomVec(long len, final  int nchunks, double thresholdNA, double NA) {
+    Vec random = Scope.track(Vec.makeConN(len, nchunks));
+    Scope.track(random);
+    new MRTask() {
+      @Override
+      public void map(Chunk c) {
+        for (int i = 0; i < c._len; i++) {
+          Random r = RandomUtils.getRNG(c.start() + i);
+          double d = r.nextDouble();
+          if (d < thresholdNA)
+            c.set(i, r.nextDouble());
+          else if (Double.isNaN(NA))
+            c.setNA(i);
+          else
+            c.set(i, NA);
+        }
+      }
+    }.doAll(random);
+    return random;
   }
 
 }

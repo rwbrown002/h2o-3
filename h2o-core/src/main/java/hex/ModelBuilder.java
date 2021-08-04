@@ -246,6 +246,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
         computeImpl();
         computeParameters();
         saveModelCheckpointIfConfigured();
+        notifyModelListeners();
       } finally {
         _parms.read_unlock_frames(_job);
         if (!_parms._is_cv_model) cleanUp(); //cv calls cleanUp on its own terms
@@ -307,6 +308,11 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
         throw new H2OIllegalArgumentException("export_checkpoints_dir", "saveModelIfConfigured", e);
       }
     }
+  }
+
+  private void notifyModelListeners() {
+    Model<?, ?, ?> model = _result.get();
+    ListenerService.getInstance().report("model_completed", model, _parms);
   }
 
   /**
@@ -1061,7 +1067,11 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
   protected boolean validateStoppingMetric() {
     return true;
   }
-  
+
+  protected void checkEarlyStoppingReproducibility() {
+    // nothing by default -> meant to be overridden 
+  }
+
   /**
    * Find and set response/weights/offset/fold and put them all in the end,
    * @return number of non-feature vecs
@@ -1173,7 +1183,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     // Drop all-constant and all-bad columns.
     if(_parms._ignore_const_cols)
       new FilterCols(npredictors) {
-        @Override protected boolean filter(Vec v) {
+        @Override protected boolean filter(Vec v, String name) {
           boolean isBad = v.isBad();
           boolean skipConst = ignoreConstColumns() && v.isConst(canLearnFromNAs()); // NAs can have information
           boolean skipString = ignoreStringColumns() && v.isString();
@@ -1587,18 +1597,21 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
         warn("_stopping_tolerance", "Stopping tolerance is ignored for _stopping_rounds=0.");
     } else if (_parms._stopping_rounds < 0) {
       error("_stopping_rounds", "Stopping rounds must be >= 0.");
-    } else if (validateStoppingMetric()){
-      if (isClassifier()) {
-        if (_parms._stopping_metric == ScoreKeeper.StoppingMetric.deviance && !getClass().getSimpleName().contains("GLM")) {
-          error("_stopping_metric", "Stopping metric cannot be deviance for classification.");
-        }
-      } else {
-        if (_parms._stopping_metric == ScoreKeeper.StoppingMetric.misclassification ||
-                _parms._stopping_metric == ScoreKeeper.StoppingMetric.AUC ||
-                _parms._stopping_metric == ScoreKeeper.StoppingMetric.logloss || _parms._stopping_metric
-                == ScoreKeeper.StoppingMetric.AUCPR)
-        {
-          error("_stopping_metric", "Stopping metric cannot be " + _parms._stopping_metric.toString() + " for regression.");
+    }
+    else { // early stopping is enabled
+      checkEarlyStoppingReproducibility();
+      if (validateStoppingMetric()) {
+        if (isClassifier()) {
+          if (_parms._stopping_metric == ScoreKeeper.StoppingMetric.deviance && !getClass().getSimpleName().contains("GLM")) {
+            error("_stopping_metric", "Stopping metric cannot be deviance for classification.");
+          }
+        } else {
+          if (_parms._stopping_metric == ScoreKeeper.StoppingMetric.misclassification ||
+                  _parms._stopping_metric == ScoreKeeper.StoppingMetric.AUC ||
+                  _parms._stopping_metric == ScoreKeeper.StoppingMetric.logloss || _parms._stopping_metric
+                  == ScoreKeeper.StoppingMetric.AUCPR) {
+            error("_stopping_metric", "Stopping metric cannot be " + _parms._stopping_metric.toString() + " for regression.");
+          }
         }
       }
     }
@@ -1820,12 +1833,12 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     final int _specialVecs; // special vecs to skip at the end
     public FilterCols(int n) {_specialVecs = n;}
 
-    abstract protected boolean filter(Vec v);
+    abstract protected boolean filter(Vec v, String name);
 
     public void doIt( Frame f, String msg, boolean expensive ) {
       List<Integer> rmcolsList = new ArrayList<>();
       for( int i = 0; i < f.vecs().length - _specialVecs; i++ )
-        if( filter(f.vec(i)) ) rmcolsList.add(i);
+        if( filter(f.vec(i), f._names[i])) rmcolsList.add(i);
       if( !rmcolsList.isEmpty() ) {
         _removedCols = new HashSet<>(rmcolsList.size());
         int[] rmcols = new int[rmcolsList.size()];
@@ -1890,6 +1903,7 @@ abstract public class ModelBuilder<M extends Model<M,P,O>, P extends Model.Param
     excluded.add("remove");
     excluded.add("cm");
     excluded.add("auc_obj");
+    excluded.add("aucpr");
     List<Method> methods = new ArrayList<>();
     {
       Model m = DKV.getGet(cvmodels[0]);

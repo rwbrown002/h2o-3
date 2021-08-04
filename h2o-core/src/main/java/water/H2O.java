@@ -1,7 +1,6 @@
 package water;
 
 import hex.ModelBuilder;
-import hex.faulttolerance.Recovery;
 import jsr166y.CountedCompleter;
 import jsr166y.ForkJoinPool;
 import jsr166y.ForkJoinWorkerThread;
@@ -278,6 +277,14 @@ final public class H2O {
     public String decrypt_tool = null;
 
     //-----------------------------------------------------------------------------------
+    // Kerberos
+    //-----------------------------------------------------------------------------------
+
+    public String principal = null;
+    public String keytab_path = null;
+    public String hdfs_token_refresh_interval = null;
+
+    //-----------------------------------------------------------------------------------
     // Networking
     //-----------------------------------------------------------------------------------
     /** -port=####; Specific Browser/API/HTML port */
@@ -389,6 +396,9 @@ final public class H2O {
     /** -aws_credentials=aws_credentials; properties file for aws credentials */
     public String aws_credentials = null;
 
+    /** -configure_s3_using_s3a; use S3A(FileSystem) to configure S3 client */
+    public boolean configure_s3_using_s3a = false;
+    
     /** --ga_hadoop_ver=ga_hadoop_ver; Version string for Hadoop */
     public String ga_hadoop_ver = null;
 
@@ -469,7 +479,7 @@ final public class H2O {
     System.out.println("ERROR: " + message);
     System.out.println("");
     printHelp();
-    H2O.exit(1);
+    H2O.exitQuietly(1); // argument parsing failed -> we might have inconsistent ARGS and not be able to initialize logging 
   }
 
   public static class OptString {
@@ -640,6 +650,9 @@ final public class H2O {
         i = s.incrementAndCheck(i, args);
         trgt.aws_credentials = args[i];
       }
+      else if (s.matches("configure_s3_using_s3a")) {
+        trgt.configure_s3_using_s3a = true;
+      }
       else if (s.matches("ga_hadoop_ver")) {
         i = s.incrementAndCheck(i, args);
         trgt.ga_hadoop_ver = args[i];
@@ -735,8 +748,21 @@ final public class H2O {
         i = s.incrementAndCheck(i, args);
         trgt.decrypt_tool = args[i];
       }
+      else if (s.matches("principal")) {
+        i = s.incrementAndCheck(i, args);
+        trgt.principal = args[i];
+      }
+      else if (s.matches("keytab")) {
+        i = s.incrementAndCheck(i, args);
+        trgt.keytab_path = args[i];
+      }
+      else if (s.matches("hdfs_token_refresh_interval")) {
+        i = s.incrementAndCheck(i, args);
+        trgt.hdfs_token_refresh_interval = args[i];
+      }
       else if (s.matches("no_latest_check")) {
         // ignored
+        Log.trace("Invoked with 'no_latest_check' option (NOOP in current release).");
       }
       else if(s.matches(("client_disconnect_timeout"))){
         i = s.incrementAndCheck(i, args);
@@ -959,6 +985,17 @@ final public class H2O {
     // Log subsystem might be still caching message, let it know to flush the cache and start logging even if we don't have SELF yet
     Log.notifyAboutProcessExiting();
 
+    exitQuietly(status);
+  }
+
+  /**
+   * Notify embedding software instance H2O wants to exit.  Shuts down a single Node.
+   * Exit without logging any buffered messages, invoked when H2O arguments are not correctly parsed
+   * and we might thus not be able to successfully initialize the logging subsystem.
+   * 
+   * @param status H2O's requested process exit value.
+   */
+  private static void exitQuietly(int status) {
     // Embedded H2O path (e.g. inside Hadoop mapper task).
     if( embeddedH2OConfig != null )
       embeddedH2OConfig.exit(status);
@@ -966,7 +1003,7 @@ final public class H2O {
     // Standalone H2O path,p or if the embedded config does not exit
     System.exit(status);
   }
-
+  
   /** Cluster shutdown itself by sending a shutdown UDP packet. */
   public static void shutdown(int status) {
     if(status == 0) H2O.orderlyShutdown();
@@ -1968,6 +2005,9 @@ final public class H2O {
   public final H2ONode leader() {
     return _memary[0];
   }
+  public final H2ONode leaderOrNull() {
+    return _memary.length > 0 ? _memary[0] : null;
+  }
 
   // Find the node index for this H2ONode, or a negative number on a miss
   int nidx( H2ONode h2o ) { return java.util.Arrays.binarySearch(_memary,h2o); }
@@ -2173,7 +2213,19 @@ final public class H2O {
       return true;
     }
     return false;
-  } 
+  }
+
+  /**
+   * Any system property starting with `ai.h2o.` and containing any more `.` does not match
+   * this pattern and is therefore ignored. This is mostly to prevent system properties
+   * serving as configuration for H2O's dependencies (e.g. `ai.h2o.org.eclipse.jetty.LEVEL` ).
+   */
+  static boolean isArgProperty(String name) {
+    final String prefix = "ai.h2o.";
+    if (!name.startsWith(prefix))
+      return false;
+    return name.lastIndexOf('.') < prefix.length(); 
+  }
 
   // --------------------------------------------------------------------------
   public static void main( String[] args ) {
@@ -2195,8 +2247,8 @@ final public class H2O {
     // effectively overwriting the earlier args.
     ArrayList<String> args2 = new ArrayList<>(Arrays.asList(args));
     for( Object p : System.getProperties().keySet() ) {
-      String s = (String)p;
-      if( s.startsWith("ai.h2o.") ) {
+      String s = (String) p;
+      if(isArgProperty(s)) {
         args2.add("-" + s.substring(7));
         // hack: Junits expect properties, throw out dummy prop for ga_opt_out
         if (!s.substring(7).equals("ga_opt_out") && !System.getProperty(s).isEmpty())
@@ -2222,7 +2274,7 @@ final public class H2O {
     long time2 = System.currentTimeMillis();
     printAndLogVersion(arguments);
     if( ARGS.version ) {
-      Log.flushBufferedMessages();
+      Log.flushBufferedMessagesToStdout();
       exit(0);
     }
 

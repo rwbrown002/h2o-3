@@ -42,7 +42,7 @@ class BuildConfig {
   private static final String TEST_PACKAGE_STASH_NAME_PREFIX = 'h2o-3-stash'
 
   public static final String H2O_OPS_TOKEN = 'h2o-ops-personal-auth-token'
-  public static final String H2O_OPS_CREDS_ID = 'd57016f6-d172-43ea-bea1-1d6c7c1747a0'
+  public static final String H2O_OPS_CREDS_ID = 'h2o-ops-gh-2020'
   private static final String COMMIT_STATE_PREFIX = 'H2O-3 Pipeline'
 
   public static final String RELEASE_BRANCH_PREFIX = 'rel-'
@@ -231,6 +231,7 @@ class BuildConfig {
     def version
     switch (component) {
       case COMPONENT_JAVA:
+      case COMPONENT_ANY:
         imageComponentName = 'jdk'
         version = stageConfig.javaVersion
         break
@@ -258,7 +259,7 @@ class BuildConfig {
   }
 
   String getStashNameForTestPackage(final String platform) {
-    return String.format("%s-%s", TEST_PACKAGE_STASH_NAME_PREFIX, platform)
+    return String.format("%s-%s", TEST_PACKAGE_STASH_NAME_PREFIX, platform == 'any' ? 'java' : platform)
   }
 
   List<String> getAdditionalGradleOpts() {

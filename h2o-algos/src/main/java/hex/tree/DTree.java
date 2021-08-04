@@ -150,12 +150,13 @@ public class DTree extends Iced {
     final double _tree_p0, _tree_p1;
 
     public Split(int col, int bin, DHistogram.NASplitDir nasplit, IcedBitSet bs, byte equal, double se, double se0, double se1, double n0, double n1, double p0, double p1, double tree_p0, double tree_p1) {
-      assert(nasplit!= DHistogram.NASplitDir.None);
-      assert(equal!=1); //no longer done
+      assert nasplit != DHistogram.NASplitDir.None;
+      assert nasplit != DHistogram.NASplitDir.NAvsREST || bs == null : "Split type NAvsREST shouldn't have a bitset";
+      assert equal != 1; //no longer done
       // FIXME: Disabled for testing PUBDEV-6495:
       // assert se > se0+se1 || se==Double.MAX_VALUE; // No point in splitting unless error goes down
-      assert(col>=0);
-      assert(bin>=0);
+      assert col >= 0;
+      assert bin >= 0;
       _col = col;  _bin = bin; _nasplit = nasplit; _bs = bs;  _equal = equal;  _se = se;
       _n0 = n0;  _n1 = n1;  _se0 = se0;  _se1 = se1;
       _p0 = p0;  _p1 = p1;
@@ -169,16 +170,29 @@ public class DTree extends Iced {
     public final double n0() { return _n0; }
     public final double n1() { return _n1; }
 
+    /**
+     * Returns an optimal numeric split point for numerical splits,
+     * -1 for bitwise splits and Float.NaN if a split should be abandoned.
+     * @param hs histograms
+     * @return "split at" value
+     */
+    float splat(DHistogram[] hs) {
+      return isNumericSplit() ? splatNumeric(hs[_col]) : -1f; // Split-at value (-1 for group-wise splits)
+    }
+
+    boolean isNumericSplit() {
+      return _nasplit != DHistogram.NASplitDir.NAvsREST && (_equal == 0 || _equal == 1);
+    }
+
     // Split-at dividing point.  Don't use the step*bin+bmin, due to roundoff
     // error we can have that point be slightly higher or lower than the bin
     // min/max - which would allow values outside the stated bin-range into the
     // split sub-bins.  Always go for a value which splits the nearest two
     // elements.
-    float splat(DHistogram hs[]) {
-      DHistogram h = hs[_col];
+    float splatNumeric(final DHistogram h) {
+      assert _nasplit != DHistogram.NASplitDir.NAvsREST : "Shouldn't be called for NA split type 'NA vs REST'";
       assert _bin > 0 && _bin < h.nbins();
-      assert _bs==null : "Dividing point is a bitset, not a bin#, so dont call splat() as result is meaningless";
-      if (_nasplit == DHistogram.NASplitDir.NAvsREST) return -1;
+      assert _bs==null : "Dividing point is a bitset, not a bin#, so don't call splat() as result is meaningless";
       assert _equal != 1;
       assert _equal==0; // not here for bitset splits, just range splits
       // Find highest non-empty bin below the split
@@ -199,9 +213,20 @@ public class DTree extends Iced {
       // above the split).  Finally we average them, and split at 48.5.
       double lo = h.binAt(x+1);
       double hi = h.binAt(n  );
-      if( h._isInt > 0 ) lo = h._step==1 ? lo-1 : Math.floor(lo);
-      if( h._isInt > 0 ) hi = h._step==1 ? hi   : Math.ceil (hi);
-      return (float)((lo+hi)/2.0);
+      if (h._isInt > 0) {
+        lo = h._step==1 ? lo-1 : Math.floor(lo);
+        hi = h._step==1 ? hi   : Math.ceil (hi);
+      }
+      final float splitAt = (float) ((lo + hi) / 2.0);
+      // abandon split if rounding errors could cause observations being incorrectly
+      // assigned to child nodes at scoring time
+      // this will typically happen when bin lengths are very small (eg. 1e-6)
+      // we will abandon a split if `lo` is not a true lower bound to a float `splitAt`
+      // (and symmetrically for `hi`)
+      if (h._checkFloatSplits && lo != hi && (lo > splitAt || hi < splitAt)) {
+        return Float.NaN;
+      }
+      return splitAt;
     }
 
 
@@ -303,7 +328,7 @@ public class DTree extends Iced {
         final boolean hasNAs = (_nasplit == DHistogram.NASplitDir.NALeft && way == 0 || 
                 _nasplit == DHistogram.NASplitDir.NARight && way == 1) && h.hasNABin();
 
-        nhists[j] = DHistogram.make(h._name, adj_nbins, h._isInt, min, maxEx, hasNAs,h._seed*0xDECAF+(way+1), parms, h._globalQuantilesKey, cs);
+        nhists[j] = DHistogram.make(h._name, adj_nbins, h._isInt, min, maxEx, hasNAs,h._seed*0xDECAF+(way+1), parms, h._globalQuantilesKey, cs, h._checkFloatSplits);
         cnt++;                    // At least some chance of splitting
       }
       return cnt == 0 ? null : nhists;
@@ -513,7 +538,17 @@ public class DTree extends Iced {
       for( FindSplits fs : findSplits) {
         DTree.Split s = fs._s;
         if( s == null ) continue;
-        if (best == null || s.se() < best.se()) best = s;
+        if (best == null || s.se() < best.se()) {
+          if (hs[s._col]._checkFloatSplits) {
+            // we evaluate the feasibility of the split only if it brings improvement of SE
+            // same could be done when building the split (findBestSplitPoint) but the lazy
+            // evaluation avoids scanning the bins unnecessarily
+            float splitAt = s.splat(hs);
+            if (Float.isNaN(splitAt))
+              continue;
+          }
+          best = s;
+        }
       }
       return best;
     }
@@ -568,7 +603,7 @@ public class DTree extends Iced {
         Arrays.fill(_nids,ScoreBuildHistogram.UNDECIDED_CHILD_NODE_ID);
         return;
       }
-      _splat = _split._nasplit != DHistogram.NASplitDir.NAvsREST && (_split._equal == 0 || _split._equal == 1) ? _split.splat(hs) : -1f; // Split-at value (-1 for group-wise splits)
+      _splat = _split.splat(hs);
       for(int way = 0; way <2; way++ ) { // left / right
         // Create children histograms, not yet populated, but the ranges are set
         Constraints ncs = cs != null ? _split.nextLevelConstraints(cs, way, _splat, _tree._parms) : null;
@@ -702,8 +737,10 @@ public class DTree extends Iced {
 
       // NA handling correction
       res++; //1 byte for NA split dir
-      if (_split._nasplit == DHistogram.NASplitDir.NAvsREST)
-        res -= _split._equal == 3 ? 6 + _split._bs.numBytes() : 4; //don't need certain stuff
+      if (_split._nasplit == DHistogram.NASplitDir.NAvsREST) {
+        assert _split._equal == 0;
+        res -= 4; // we don't need to represent the actual split value
+      }
 
       Node left = _tree.node(_nids[0]);
       int lsz = left.size();
@@ -1304,7 +1341,8 @@ public class DTree extends Iced {
     // For categorical (unordered) predictors, we sorted the bins by average
     // prediction then found the optimal split on sorted bins
     IcedBitSet bs = null;       // In case we need an arbitrary bitset
-    if( idxs != null ) {        // We sorted bins; need to build a bitset
+    if (idxs != null            // We sorted bins; need to build a bitset
+            && nasplit != DHistogram.NASplitDir.NAvsREST) { // NA vs REST don't need a bitset
       final int off = (int) hs._min;
       bs = new IcedBitSet(nbins, off);
       equal = fillBitSet(hs, off, idxs, best, nbins, bs);
@@ -1320,6 +1358,7 @@ public class DTree extends Iced {
     assert constraint == 0 || constraint * tree_p0 <= constraint * tree_p1;
     assert (Double.isNaN(min) || min <= tree_p0) && (Double.isNaN(max) || tree_p0 <= max);
     assert (Double.isNaN(min) || min <= tree_p1) && (Double.isNaN(max) || tree_p1 <= max);
+
     Split split = new Split(col, best, nasplit, bs, equal, seBefore, best_seL, best_seR, nLeft, nRight, node_p0, node_p1, tree_p0, tree_p1);
     if (LOG.isTraceEnabled()) LOG.trace("splitting on " + hs._name + ": " + split);
     return split;

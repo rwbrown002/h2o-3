@@ -19,7 +19,7 @@ import water.util.TwoDimTable;
 import java.util.*;
 
 public class GBMModel extends SharedTreeModelWithContributions<GBMModel, GBMModel.GBMParameters, GBMModel.GBMOutput> 
-        implements Model.StagedPredictions, FeatureInteractionsCollector {
+        implements Model.StagedPredictions, FeatureInteractionsCollector, FriedmanPopescusHCollector {
 
   public static class GBMParameters extends SharedTreeModel.SharedTreeParameters {
     public double _learn_rate;
@@ -45,9 +45,26 @@ public class GBMModel extends SharedTreeModelWithContributions<GBMModel, GBMMode
     public String fullName() { return "Gradient Boosting Machine"; }
     public String javaName() { return GBMModel.class.getName(); }
 
+    @Override
+    public boolean forceStrictlyReproducibleHistograms() {
+      // if monotone constraints are enabled -> use strictly reproducible histograms (we calculate values that
+      // are not subject to reduce precision logic in DHistogram (the "float trick" cannot be applied)
+      return usesMonotoneConstraints();
+    }
+
+    private boolean usesMonotoneConstraints() {
+      if (areMonotoneConstraintsEmpty())
+        return emptyConstraints(0) != null;
+      return true;
+    }
+
+    private boolean areMonotoneConstraintsEmpty() {
+      return _monotone_constraints == null || _monotone_constraints.length == 0;
+    }
+
     public Constraints constraints(Frame f) {
-      if (_monotone_constraints == null || _monotone_constraints.length == 0) {
-        return emptyConstraints(f);
+      if (areMonotoneConstraintsEmpty()) {
+        return emptyConstraints(f.numCols());
       }
       int[] cs = new int[f.numCols()];
       for (KeyValue spec : _monotone_constraints) {
@@ -69,10 +86,9 @@ public class GBMModel extends SharedTreeModelWithContributions<GBMModel, GBMMode
     }
 
     // allows to override the behavior in tests (eg. create empty constraints and test execution as if constraints were used)
-    Constraints emptyConstraints(Frame f) {
+    Constraints emptyConstraints(int nCols) {
       return null;
     }
-    
   }
 
   public static class GBMOutput extends SharedTreeModel.SharedTreeOutput {
@@ -294,6 +310,19 @@ public class GBMModel extends SharedTreeModelWithContributions<GBMModel, GBMMode
   @Override
   public TwoDimTable[][] getFeatureInteractionsTable(int maxInteractionDepth, int maxTreeDepth, int maxDeepening) {
     return FeatureInteractions.getFeatureInteractionsTable(this.getFeatureInteractions(maxInteractionDepth,maxTreeDepth,maxDeepening));
+  }
+
+  @Override
+  public double getFriedmanPopescusH(Frame frame, String[] vars) {
+    int nclasses = this._output._nclasses > 2 ? this._output._nclasses : 1;
+    SharedTreeSubgraph[][] sharedTreeSubgraphs = new SharedTreeSubgraph[this._parms._ntrees][nclasses];
+    for (int i = 0; i < this._parms._ntrees; i++) {
+      for (int j = 0; j < nclasses; j++) {
+        sharedTreeSubgraphs[i][j] = this.getSharedTreeSubgraph(i, j);
+      }
+    }
+    
+    return FriedmanPopescusH.h(frame, vars, this._parms._learn_rate, sharedTreeSubgraphs);
   }
 
 }

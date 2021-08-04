@@ -341,7 +341,7 @@ class ModelBase(h2o_meta(Keyed)):
         """
         return self._model_json["output"]["training_metrics"]._metric_json
     
-    def model_performance(self, test_data=None, train=False, valid=False, xval=False):
+    def model_performance(self, test_data=None, train=False, valid=False, xval=False, auc_type="none"):
         """
         Generate model metrics for this model on test_data.
 
@@ -351,10 +351,14 @@ class ModelBase(h2o_meta(Keyed)):
         :param bool valid: Report the validation metrics for the model.
         :param bool xval: Report the cross-validation metrics for the model. If train and valid are True, then it
             defaults to True.
+        :param String auc_type: Change default AUC type for multinomial classification AUC/AUCPR calculation when test_data is not None. One of: ``"auto"``, ``"none"``, ``"macro_ovr"``, ``"weighted_ovr"``, ``"macro_ovo"``, ``"weighted_ovo"`` (default: ``"none"``). If type is "auto" or "none" AUC and AUCPR is not calculated.
 
         :returns: An object of class H2OModelMetrics.
         """
+        
         if test_data is None:
+            if auc_type is not None and auc_type != "none":
+                print("WARNING: The `auc_type` parameter is set but it is not used because the `test_data` parameter is None.")
             if train: 
                 return self._model_json["output"]["training_metrics"]
             if valid: 
@@ -368,7 +372,10 @@ class ModelBase(h2o_meta(Keyed)):
             if (self._model_json["response_column_name"] is not None) and not(self._model_json["response_column_name"] in test_data.names):
                 print("WARNING: Model metrics cannot be calculated and metric_json is empty due to the absence of the response column in your dataset.")
                 return
-            res = h2o.api("POST /3/ModelMetrics/models/%s/frames/%s" % (self.model_id, test_data.frame_id))
+            if auc_type is not None:
+                assert_is_type(auc_type, None, Enum("auto", "none", "macro_ovr", "weighted_ovr", "macro_ovo", "weighted_ovo"))
+                res = h2o.api("POST /3/ModelMetrics/models/%s/frames/%s" % (self.model_id, test_data.frame_id), 
+                              data={"auc_type": auc_type})
 
             # FIXME need to do the client-side filtering...  (PUBDEV-874)
             raw_metrics = None
@@ -421,9 +428,10 @@ class ModelBase(h2o_meta(Keyed)):
         :param max_interaction_depth: Upper bound for extracted feature interactions depth. Defaults to 100.
         :param max_tree_depth: Upper bound for tree depth. Defaults to 100.
         :param max_deepening: Upper bound for interaction start deepening (zero deepening => interactions 
-        starting at root only). Defaults to -1.
-        :param path: Path where to save the output in .xlsx format. Please note that Pandas and XlsxWriter need to be 
-        installed for using this option. Defaults to None.
+            starting at root only). Defaults to -1.
+        :param path: (Optional) Path where to save the output in .xlsx format (e.g. ``/mypath/file.xlsx``).
+            Please note that Pandas and XlsxWriter need to be installed for using this option. Defaults to None.
+
 
         :examples:
         >>> boston = h2o.import_file("https://s3.amazonaws.com/h2o-public-test-data/smalldata/gbm_test/BostonHousing.csv")
@@ -453,6 +461,43 @@ class ModelBase(h2o_meta(Keyed)):
             
             return json['feature_interaction']
         print("No calculation available for this model")
+        
+        
+    def h(self, frame, variables):
+        """
+        Calculates Friedman and Popescu's H statistics, in order to test for the presence of an interaction between specified variables in h2o gbm and xgb models.
+        H varies from 0 to 1. It will have a value of 0 if the model exhibits no interaction between specified variables and a correspondingly larger value for a 
+        stronger interaction effect between them. NaN is returned if a computation is spoiled by weak main effects and rounding errors.
+        
+        See Jerome H. Friedman and Bogdan E. Popescu, 2008, "Predictive learning via rule ensembles", *Ann. Appl. Stat.*
+        **2**:916-954, http://projecteuclid.org/download/pdfview_1/euclid.aoas/1223908046, s. 8.1.
+
+        
+        :param frame: the frame that current model has been fitted to
+        :param variables: variables of the interest
+        :return: H statistic of the variables 
+        
+        :examples:
+        >>> prostate_train = h2o.import_file("https://s3.amazonaws.com/h2o-public-test-data/smalldata/logreg/prostate_train.csv")
+        >>> prostate_train["CAPSULE"] = prostate_train["CAPSULE"].asfactor()
+        >>> gbm_h2o = H2OGradientBoostingEstimator(ntrees=100, learn_rate=0.1,
+        >>>                                 max_depth=5,
+        >>>                                 min_rows=10,
+        >>>                                 distribution="bernoulli")
+        >>> gbm_h2o.train(x=list(range(1,prostate_train.ncol)),y="CAPSULE", training_frame=prostate_train)
+        >>> h = gbm_h2o.h(prostate_train, ['DPROS','DCAPS'])
+        """
+        supported_algos = ['gbm', 'xgboost']
+        if self._model_json["algo"] in supported_algos:
+            kwargs = {}
+            kwargs["model_id"] = self.model_id
+            kwargs["frame"] = frame.key
+            kwargs["variables"] = variables
+
+            json = h2o.api("POST /3/FriedmansPopescusH", data=kwargs)
+            return json['h']
+
+        print("No calculation available for this model")    
 
     def cross_validation_metrics_summary(self):
         """
@@ -1463,7 +1508,7 @@ class ModelBase(h2o_meta(Keyed)):
         Plot the variable importance for a trained model.
 
         :param num_of_features: the number of features shown in the plot (default is 10 or all if less than 10).
-        :param server: if true set server settings to matplotlib and show the graph
+        :param server: if true set server settings to matplotlib and do not show the graph
 
         :returns: None.
         """

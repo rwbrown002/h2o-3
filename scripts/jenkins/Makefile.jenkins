@@ -23,6 +23,9 @@ test-build-h2o-public:
 compress-huge-logfiles:
 	find * -type f -name 'java*.out.txt' -exec gzip {} \;
 
+check-pull-request:
+	./gradlew checkPullRequest
+
 test-package-py:
 	zip -q -r test-package-py.zip \
 	    h2o-py/tests/ h2o-py/demos/ \
@@ -202,6 +205,20 @@ test-info:
 		cat h2o-r/tests/results/INFO_file.txt; \
 		exit 1; \
 	fi
+
+test-package-gradle:
+	zip -q -r test-package-java \
+		tests/leakCheckKeywords \
+		$(JENKINS_MAKEFILE_PATH) \
+		gradlew \
+		gradle.properties \
+		gradle/ \
+		buildSrc/ \
+		multiNodeUtils.sh
+	find . -name "*.gradle" | zip -q -r test-package-java \
+	    -x h2o-web/* \
+	    -x h2o-bindings/* \
+	    -@
 
 test-package-java:
 	zip -q -r test-package-java \
