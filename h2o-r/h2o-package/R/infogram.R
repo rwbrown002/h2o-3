@@ -79,6 +79,7 @@
 #'        0.
 #' @param ntop number of top k variables to consider based on the varimp.  Default to 0.0 which is to consider all predictors
 #'        Defaults to 50.
+#' @param build_final_model \code{Logical}. If true will build a final model. Default to false Defaults to FALSE.
 #' @param compute_p_values \code{Logical}. If true will calculate the p-value. Default to false Defaults to FALSE.
 #' @examples
 #' \dontrun{
@@ -130,6 +131,7 @@ h2o.infogram <- function(x,
                          data_fraction = 1,
                          nparallelism = 0,
                          ntop = 50,
+                         build_final_model = FALSE,
                          compute_p_values = FALSE)
 {
   # Validate required training_frame first and other frame args: should be a valid key or an H2OFrame object
@@ -222,6 +224,8 @@ h2o.infogram <- function(x,
     parms$nparallelism <- nparallelism
   if (!missing(ntop))
     parms$ntop <- ntop
+  if (!missing(build_final_model))
+    parms$build_final_model <- build_final_model
   if (!missing(compute_p_values))
     parms$compute_p_values <- compute_p_values
 
@@ -279,6 +283,7 @@ h2o.infogram <- function(x,
                                          data_fraction = 1,
                                          nparallelism = 0,
                                          ntop = 50,
+                                         build_final_model = FALSE,
                                          compute_p_values = FALSE,
                                          segment_columns = NULL,
                                          segment_models_id = NULL,
@@ -376,6 +381,8 @@ h2o.infogram <- function(x,
     parms$nparallelism <- nparallelism
   if (!missing(ntop))
     parms$ntop <- ntop
+  if (!missing(build_final_model))
+    parms$build_final_model <- build_final_model
   if (!missing(compute_p_values))
     parms$compute_p_values <- compute_p_values
 

@@ -63,6 +63,7 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             "data_fraction",
             "nparallelism",
             "ntop",
+            "build_final_model",
             "compute_p_values"
     };
 
@@ -156,6 +157,10 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             level = API.Level.secondary, gridable = true)
     public int ntop;
 
+    @API(help = "If true will build a final model. Default to false",
+            level = API.Level.secondary, gridable = false)
+    public boolean build_final_model;  // todo implement this option
+    
     @API(help = "If true will calculate the p-value. Default to false",
             level = API.Level.secondary, gridable = false)
     public boolean compute_p_values;  // todo implement this option

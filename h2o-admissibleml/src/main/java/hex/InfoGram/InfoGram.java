@@ -172,10 +172,12 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
         _cmiRelKey = model._output.generateCMIRelFrame();
         model._output.extractAdmissibleFeatures(_varImp, model._output._all_predictor_names, _cmi, _cmiRaw,
                 _parms._conditional_info_threshold, _parms._varimp_threshold);  // extract admissible information model output
-        Model finalModel = buildFinalModel(model._output._admissible_features);
-        Scope.track_generic(finalModel);
         _job.update(1, "finished building final model with admissible features ...");
-        fillModelMetrics(model, finalModel, _parms._model_algorithm_parameters._train.get(), _parms._model_algorithm);
+        if (_parms._build_final_model) {
+          Model finalModel = buildFinalModel(model._output._admissible_features);
+          Scope.track_generic(finalModel);
+          fillModelMetrics(model, finalModel, _parms._model_algorithm_parameters._train.get(), _parms._model_algorithm);
+        }
         _job.update(0, "InfoGram building completed...");
         model.update(_job);
       } finally {

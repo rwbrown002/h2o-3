@@ -80,6 +80,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
     public int _ntop = 50;                           // if 0 consider all predictors, otherwise, consider topk predictors
     public boolean _compute_p_values = false;                   // if true, will calculate p-value
     public int _nparallelism = 0;
+    public boolean _build_final_model = false;
 
     public enum Algorithm {
       AUTO,
