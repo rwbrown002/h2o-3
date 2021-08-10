@@ -70,7 +70,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
   public static class InfoGramParameters extends Model.Parameters {
     public Algorithm _infogram_algorithm = Algorithm.gbm;     // default to GBM
     public String _infogram_algorithm_params = new String();   // store user specific parameters for chosen algorithm
-    public Algorithm _model_algorithm = Algorithm.gbm; // default to GBM to build final model
+    public Algorithm _model_algorithm = null; // default to GBM to build final model
     public String _model_algorithm_params = new String();   // store user specific parameters for chosen algorithm
     public String[] _sensitive_attributes = null;     // store sensitive features to be excluded from final model
     public double _conditional_info_threshold = 0.1;  // default set by Deep
@@ -303,6 +303,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
       return cmiRelFrame._key;
 
     }
+    
     public void copyCMIRelevance( double[] cmiRaw, double[] cmi, String[] topKPredictors,
                                   TwoDimTable varImp) {
       _cmi_raw = new double[cmi.length];
@@ -349,6 +350,15 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
     }
   }
 
+  @Override
+  public boolean haveMojo() {
+     return false;
+  }
+
+  @Override
+  public boolean havePojo() {
+    return false;
+  }
 
   @Override
   protected Futures remove_impl(Futures fs, boolean cascade) {

@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import hex.genmodel.utils.DistributionFamily;
 
+import static hex.InfoGram.InfoGramModel.InfoGramParameters.Algorithm.gbm;
 import static hex.InfoGram.InfoGramUtils.*;
 import static hex.gam.MatrixFrameUtils.GamUtils.keepFrameKeys;
 
@@ -62,6 +63,16 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
   @Override
   public boolean isSupervised() {
     return true;
+  }
+
+  @Override
+  public boolean havePojo() {
+    return false;
+  }
+
+  @Override
+  public boolean haveMojo() {
+    return false;
   }
 
   @Override
@@ -145,7 +156,8 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
       String[] eligiblePredictors = extractPredictors(_parms);  // exclude senstive attributes if applicable
       _baseOrSensitiveFrame = extractTrainingFrame(_parms, _parms._sensitive_attributes, 1, _parms.train().clone());
       _parms.fillImpl(true); // copy over model specific parameters to build infogram
-      _parms.fillImpl(false); // copy over model specific parameters for final model
+      if (_parms._build_final_model)
+        _parms.fillImpl(false); // copy over model specific parameters for final model
       _topKPredictors = extractTopKPredictors(_parms, _parms.train(), eligiblePredictors, _generatedFrameKeys); // extract topK predictors
     }
 
@@ -155,9 +167,9 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
       if (error_count() > 0)
         throw H2OModelBuilderIllegalArgumentException.makeFromBuilder(InfoGram.this);
       _job.update(0, "Initializing model training");
+      _generatedFrameKeys = new ArrayList<>(); // generated infogram model plus one for safe Infogram
       generateBasicFrame(); // generate tranining frame with predictors and sensitive features (if specified)
       _numModels = 1 + _topKPredictors.length;
-      _generatedFrameKeys = new ArrayList<>(); // generated infogram model plus one for safe Infogram
       _modelDescription = generateModelDescription(_topKPredictors, _parms._sensitive_attributes);
       buildModel();
     }

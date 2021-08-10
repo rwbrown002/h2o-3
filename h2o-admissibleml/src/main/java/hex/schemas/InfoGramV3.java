@@ -123,7 +123,7 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             level = API.Level.expert, gridable=true)
     public String infogram_algorithm_params;
 
-    @API(help = "Machine learning algorithm chosen to build the final model.  AUTO default to GBM", values={"AUTO",
+    @API(help = "Machine learning algorithm chosen to build the final model.  Default to null", values={"null", "AUTO",
             "deeplearning", "drf", "gbm", "glm", "xgboost"}, level = API.Level.critical, 
             direction = API.Direction.INOUT, gridable=true)
     public InfoGramModel.InfoGramParameters.Algorithm model_algorithm;
