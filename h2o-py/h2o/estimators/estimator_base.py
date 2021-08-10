@@ -280,8 +280,6 @@ class H2OEstimator(ModelBase):
             if x is None:
                 xset = set(names) - {y} - ignored_columns_set
             elif hasattr(x, 'algo') and (x.algo=='infogram'):
-                if not(self.algo in ["gbm", "glm", "xgboost", "deeplearning", "drf"]):
-                    raise H2OValueError("InfoGram only supports gbm, glm ,xgboost, deeplearning, drf.")
                 xset = set(x._model_json["output"]["admissible_features"])
             else:
                 xset = set()

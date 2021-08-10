@@ -21,13 +21,14 @@ import java.lang.reflect.Field;
 import java.util.*;
 import java.util.stream.IntStream;
 
-import static hex.InfoGram.InfoGramModel.InfoGramParameter.Algorithm.glm;
+import static hex.InfoGram.InfoGramModel.InfoGramParameters.Algorithm.glm;
+import static hex.InfoGram.InfoGramUtils.setGLMFamilyParams;
 import static hex.genmodel.utils.DistributionFamily.bernoulli;
 import static hex.genmodel.utils.DistributionFamily.multinomial;
 import static hex.glm.GLMModel.GLMParameters.Family.binomial;
 import static water.util.ArrayUtils.sort;
 
-public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramParameter, InfoGramModel.InfoGramModelOutput> {
+public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramParameters, InfoGramModel.InfoGramModelOutput> {
   /**
    * Full constructor
    *
@@ -35,7 +36,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
    * @param parms
    * @param output
    */
-  public InfoGramModel(Key<InfoGramModel> selfKey, InfoGramModel.InfoGramParameter parms, InfoGramModelOutput output) {
+  public InfoGramModel(Key<InfoGramModel> selfKey, InfoGramModel.InfoGramParameters parms, InfoGramModelOutput output) {
     super(selfKey, parms, output);
   }
 
@@ -66,7 +67,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
             "their own model and score with that model.");
   }
 
-  public static class InfoGramParameter extends Model.Parameters {
+  public static class InfoGramParameters extends Model.Parameters {
     public Algorithm _infogram_algorithm = Algorithm.gbm;     // default to GBM
     public String _infogram_algorithm_params = new String();   // store user specific parameters for chosen algorithm
     public Algorithm _model_algorithm = Algorithm.gbm; // default to GBM to build final model
@@ -162,7 +163,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
           paramsSchema = new GLMV3.GLMParametersV3();
           params = new GLMModel.GLMParameters();
           excludeList.add("_distribution");
-          //        ((GLMParameters) params)._family = null;
+          setGLMFamilyParams((GLMModel.GLMParameters) params, this);
           break;
         case gbm:
           paramsSchema = new GBMV3.GBMParametersV3();

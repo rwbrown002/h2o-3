@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Properties;
 
 public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGramV3.InfoGramParametersV3> {
-  public static final class InfoGramParametersV3 extends ModelParametersSchemaV3<InfoGramModel.InfoGramParameter, InfoGramParametersV3> {
+  public static final class InfoGramParametersV3 extends ModelParametersSchemaV3<InfoGramModel.InfoGramParameters, InfoGramParametersV3> {
     public static final String[] fields = new String[] {
             "model_id",
             "training_frame",
@@ -63,7 +63,6 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             "data_fraction",
             "nparallelism",
             "ntop",
-            "build_final_model",
             "compute_p_values"
     };
 
@@ -118,7 +117,7 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
     @API(help = "Machine learning algorithm chosen to build the infogram.  AUTO default to GBM", values={"AUTO",
             "deeplearning", "drf", "gbm", "glm", "xgboost"}, level = API.Level.expert, 
             direction = API.Direction.INOUT, gridable=true)
-    public InfoGramModel.InfoGramParameter.Algorithm infogram_algorithm;
+    public InfoGramModel.InfoGramParameters.Algorithm infogram_algorithm;
 
     @API(help = "parameters specified to the chosen algorithm can be passed to infogram using algorithm_params",
             level = API.Level.expert, gridable=true)
@@ -127,7 +126,7 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
     @API(help = "Machine learning algorithm chosen to build the final model.  AUTO default to GBM", values={"AUTO",
             "deeplearning", "drf", "gbm", "glm", "xgboost"}, level = API.Level.critical, 
             direction = API.Direction.INOUT, gridable=true)
-    public InfoGramModel.InfoGramParameter.Algorithm model_algorithm;
+    public InfoGramModel.InfoGramParameters.Algorithm model_algorithm;
 
     @API(help = "parameters specified to the chosen final algorithm", level = API.Level.secondary, gridable=true)
     public String model_algorithm_params;
@@ -156,16 +155,12 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             " all predictors",
             level = API.Level.secondary, gridable = true)
     public int ntop;
-
-    @API(help = "If true will build a final model. Default to false",
-            level = API.Level.secondary, gridable = false)
-    public boolean build_final_model;  // todo implement this option
     
     @API(help = "If true will calculate the p-value. Default to false",
             level = API.Level.secondary, gridable = false)
     public boolean compute_p_values;  // todo implement this option
 
-    public InfoGramModel.InfoGramParameter fillImpl(InfoGramModel.InfoGramParameter impl) {
+    public InfoGramModel.InfoGramParameters fillImpl(InfoGramModel.InfoGramParameters impl) {
       super.fillImpl(impl);
  
       if (infogram_algorithm_params != null && !infogram_algorithm_params.isEmpty()) {
@@ -218,7 +213,7 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
       }
     }
 
-    ParamNParamSchema generateParamsSchema(InfoGramModel.InfoGramParameter.Algorithm chosenAlgo) {
+    ParamNParamSchema generateParamsSchema(InfoGramModel.InfoGramParameters.Algorithm chosenAlgo) {
       ModelParametersSchemaV3 paramsSchema;
       Model.Parameters params;
       switch (chosenAlgo) {

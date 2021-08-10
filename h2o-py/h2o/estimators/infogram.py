@@ -74,7 +74,6 @@ class H2OInfoGramEstimator(H2OEstimator):
                  data_fraction=1.0,  # type: float
                  nparallelism=0,  # type: int
                  ntop=50,  # type: int
-                 build_final_model=False,  # type: bool
                  compute_p_values=False,  # type: bool
                  ):
         """
@@ -218,9 +217,6 @@ class H2OInfoGramEstimator(H2OEstimator):
                predictors
                Defaults to ``50``.
         :type ntop: int
-        :param build_final_model: If true will build a final model. Default to false
-               Defaults to ``False``.
-        :type build_final_model: bool
         :param compute_p_values: If true will calculate the p-value. Default to false
                Defaults to ``False``.
         :type compute_p_values: bool
@@ -266,7 +262,6 @@ class H2OInfoGramEstimator(H2OEstimator):
         self.data_fraction = data_fraction
         self.nparallelism = nparallelism
         self.ntop = ntop
-        self.build_final_model = build_final_model
         self.compute_p_values = compute_p_values
         self._parms["_rest_version"] = 3
 
@@ -840,20 +835,6 @@ class H2OInfoGramEstimator(H2OEstimator):
     def ntop(self, ntop):
         assert_is_type(ntop, None, int)
         self._parms["ntop"] = ntop
-
-    @property
-    def build_final_model(self):
-        """
-        If true will build a final model. Default to false
-
-        Type: ``bool``, defaults to ``False``.
-        """
-        return self._parms.get("build_final_model")
-
-    @build_final_model.setter
-    def build_final_model(self, build_final_model):
-        assert_is_type(build_final_model, None, bool)
-        self._parms["build_final_model"] = build_final_model
 
     @property
     def compute_p_values(self):

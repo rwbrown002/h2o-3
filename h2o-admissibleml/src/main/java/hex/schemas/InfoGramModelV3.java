@@ -6,7 +6,7 @@ import water.api.schemas3.ModelOutputSchemaV3;
 import water.api.schemas3.ModelSchemaV3;
 
 
-public class InfoGramModelV3 extends ModelSchemaV3<InfoGramModel, InfoGramModelV3, InfoGramModel.InfoGramParameter,
+public class InfoGramModelV3 extends ModelSchemaV3<InfoGramModel, InfoGramModelV3, InfoGramModel.InfoGramParameters,
         InfoGramV3.InfoGramParametersV3, InfoGramModel.InfoGramModelOutput, InfoGramModelV3.InfoGramModelOutputV3> {
   public static final class InfoGramModelOutputV3 extends ModelOutputSchemaV3<InfoGramModel.InfoGramModelOutput, InfoGramModelOutputV3> {
     @API(help="Array of conditional mutual information for admissible features normalized to 0.0 and 1.0", 
@@ -49,7 +49,7 @@ public class InfoGramModelV3 extends ModelSchemaV3<InfoGramModel, InfoGramModelV
 
   @Override
   public InfoGramModel createImpl() {
-    InfoGramModel.InfoGramParameter parms = parameters.createImpl();
+    InfoGramModel.InfoGramParameters parms = parameters.createImpl();
     return new InfoGramModel(model_id.key(), parms, null);
   }
 }

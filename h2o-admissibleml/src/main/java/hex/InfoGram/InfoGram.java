@@ -23,7 +23,7 @@ import static hex.gam.MatrixFrameUtils.GamUtils.keepFrameKeys;
 
 
 
-public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGramParameter,
+public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGramParameters,
         InfoGramModel.InfoGramModelOutput> {
   boolean _buildCore; // true to find core predictors, false to find admissible predictors
   String[] _topKPredictors; // contain the names of top predictors to consider for infogram
@@ -37,14 +37,14 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
   Key<Frame> _cmiRelKey;
   List<Key<Frame>> _generatedFrameKeys; // keep track of all keys generated
 
-  public InfoGram(boolean startup_once) { super(new InfoGramModel.InfoGramParameter(), startup_once);}
+  public InfoGram(boolean startup_once) { super(new InfoGramModel.InfoGramParameters(), startup_once);}
 
-  public InfoGram(InfoGramModel.InfoGramParameter parms) {
+  public InfoGram(InfoGramModel.InfoGramParameters parms) {
     super(parms);
     init(false);
   }
 
-  public InfoGram(InfoGramModel.InfoGramParameter parms, Key<InfoGramModel> key) {
+  public InfoGram(InfoGramModel.InfoGramParameters parms, Key<InfoGramModel> key) {
     super(parms, key);
     init(false);
   }
@@ -135,6 +135,9 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
     if (DistributionFamily.AUTO.equals(_parms._distribution)) {
       _parms._distribution = (nclasses() == 2) ? DistributionFamily.bernoulli : DistributionFamily.multinomial;
     }
+    
+    if (_parms._model_algorithm != null || _parms._model_algorithm_parameters != null)
+      _parms._build_final_model = true;
   }
 
   private class InfoGramDriver extends Driver {
