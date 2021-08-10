@@ -125,6 +125,8 @@ public class GenericModel extends Model<GenericModel, GenericModelParameters, Ge
                 return mojoModel.isSupervised() ? mojoModel.getResponseName() : null; 
             }
             @Override
+            public String getTreatmentColumn() {return null;}
+            @Override
             public double missingColumnsType() {
                 return Double.NaN;
             }
