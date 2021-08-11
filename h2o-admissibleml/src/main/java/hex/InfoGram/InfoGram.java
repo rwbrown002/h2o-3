@@ -18,6 +18,7 @@ import java.util.Arrays;
 import java.util.List;
 import hex.genmodel.utils.DistributionFamily;
 
+import static hex.InfoGram.InfoGramModel.InfoGramParameters.Algorithm.AUTO;
 import static hex.InfoGram.InfoGramModel.InfoGramParameters.Algorithm.gbm;
 import static hex.InfoGram.InfoGramUtils.*;
 import static hex.gam.MatrixFrameUtils.GamUtils.keepFrameKeys;
@@ -147,7 +148,7 @@ public class InfoGram extends ModelBuilder<InfoGramModel, InfoGramModel.InfoGram
       _parms._distribution = (nclasses() == 2) ? DistributionFamily.bernoulli : DistributionFamily.multinomial;
     }
     
-    if (_parms._model_algorithm != null || _parms._model_algorithm_parameters != null)
+    if (!AUTO.equals(_parms._model_algorithm) || null != _parms._model_algorithm_parameters)
       _parms._build_final_model = true;
   }
 

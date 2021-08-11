@@ -66,7 +66,7 @@ class H2OInfoGramEstimator(H2OEstimator):
                  auc_type="auto",  # type: Literal["auto", "none", "macro_ovr", "weighted_ovr", "macro_ovo", "weighted_ovo"]
                  infogram_algorithm="gbm",  # type: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]
                  infogram_algorithm_params=None,  # type: Optional[dict]
-                 model_algorithm=None,  # type: Optional[Literal["null", "auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]]
+                 model_algorithm=None,  # type: Optional[Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]]
                  model_algorithm_params=None,  # type: Optional[dict]
                  sensitive_attributes=None,  # type: Optional[List[str]]
                  conditional_info_threshold=0.1,  # type: float
@@ -188,9 +188,13 @@ class H2OInfoGramEstimator(H2OEstimator):
                algorithm_params
                Defaults to ``None``.
         :type infogram_algorithm_params: dict, optional
-        :param model_algorithm: Machine learning algorithm chosen to build the final model.  Default to null
+        :param model_algorithm: Machine learning algorithm chosen to build the final model.  Default to AUTO.  If you do
+               not specifymodel_algorithm_params, this will turn off final model building.  If you want to build a final
+               model, make sure you specify model_algorithm not to AUTO or specify model_algorithm_params.  If you
+               specifymodel_algorithm_params but did not specify model_algorithm, a final gbm will be built with
+               parametersspecified in model_algorithm_params.
                Defaults to ``None``.
-        :type model_algorithm: Literal["null", "auto", "deeplearning", "drf", "gbm", "glm", "xgboost"], optional
+        :type model_algorithm: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"], optional
         :param model_algorithm_params: parameters specified to the chosen final algorithm
                Defaults to ``None``.
         :type model_algorithm_params: dict, optional
@@ -711,15 +715,19 @@ class H2OInfoGramEstimator(H2OEstimator):
     @property
     def model_algorithm(self):
         """
-        Machine learning algorithm chosen to build the final model.  Default to null
+        Machine learning algorithm chosen to build the final model.  Default to AUTO.  If you do not
+        specifymodel_algorithm_params, this will turn off final model building.  If you want to build a final model,
+        make sure you specify model_algorithm not to AUTO or specify model_algorithm_params.  If you
+        specifymodel_algorithm_params but did not specify model_algorithm, a final gbm will be built with
+        parametersspecified in model_algorithm_params.
 
-        Type: ``Literal["null", "auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]``.
+        Type: ``Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]``.
         """
         return self._parms.get("model_algorithm")
 
     @model_algorithm.setter
     def model_algorithm(self, model_algorithm):
-        assert_is_type(model_algorithm, None, Enum("null", "auto", "deeplearning", "drf", "gbm", "glm", "xgboost"))
+        assert_is_type(model_algorithm, None, Enum("auto", "deeplearning", "drf", "gbm", "glm", "xgboost"))
         self._parms["model_algorithm"] = model_algorithm
 
     @property

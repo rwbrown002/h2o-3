@@ -123,9 +123,12 @@ public class InfoGramV3 extends ModelBuilderSchema<InfoGram, InfoGramV3, InfoGra
             level = API.Level.expert, gridable=true)
     public String infogram_algorithm_params;
 
-    @API(help = "Machine learning algorithm chosen to build the final model.  Default to null", values={"null", "AUTO",
-            "deeplearning", "drf", "gbm", "glm", "xgboost"}, level = API.Level.critical, 
-            direction = API.Direction.INOUT, gridable=true)
+    @API(help = "Machine learning algorithm chosen to build the final model.  Default to AUTO.  If you do not specify" +
+            "model_algorithm_params, this will turn off final model building.  If you want to build a final model," +
+            " make sure you specify model_algorithm not to AUTO or specify model_algorithm_params.  If you specify" +
+            "model_algorithm_params but did not specify model_algorithm, a final gbm will be built with parameters" +
+            "specified in model_algorithm_params.", values={"AUTO", "deeplearning", "drf", "gbm", "glm", "xgboost"},
+            level = API.Level.critical, direction = API.Direction.INOUT, gridable=true)
     public InfoGramModel.InfoGramParameters.Algorithm model_algorithm;
 
     @API(help = "parameters specified to the chosen final algorithm", level = API.Level.secondary, gridable=true)
