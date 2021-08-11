@@ -66,7 +66,7 @@ class H2OInfoGramEstimator(H2OEstimator):
                  auc_type="auto",  # type: Literal["auto", "none", "macro_ovr", "weighted_ovr", "macro_ovo", "weighted_ovo"]
                  infogram_algorithm="gbm",  # type: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]
                  infogram_algorithm_params=None,  # type: Optional[dict]
-                 model_algorithm=None,  # type: Optional[Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]]
+                 model_algorithm="auto",  # type: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]
                  model_algorithm_params=None,  # type: Optional[dict]
                  sensitive_attributes=None,  # type: Optional[List[str]]
                  conditional_info_threshold=0.1,  # type: float
@@ -193,8 +193,8 @@ class H2OInfoGramEstimator(H2OEstimator):
                model, make sure you specify model_algorithm not to AUTO or specify model_algorithm_params.  If you
                specifymodel_algorithm_params but did not specify model_algorithm, a final gbm will be built with
                parametersspecified in model_algorithm_params.
-               Defaults to ``None``.
-        :type model_algorithm: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"], optional
+               Defaults to ``"auto"``.
+        :type model_algorithm: Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]
         :param model_algorithm_params: parameters specified to the chosen final algorithm
                Defaults to ``None``.
         :type model_algorithm_params: dict, optional
@@ -721,7 +721,7 @@ class H2OInfoGramEstimator(H2OEstimator):
         specifymodel_algorithm_params but did not specify model_algorithm, a final gbm will be built with
         parametersspecified in model_algorithm_params.
 
-        Type: ``Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]``.
+        Type: ``Literal["auto", "deeplearning", "drf", "gbm", "glm", "xgboost"]``, defaults to ``"auto"``.
         """
         return self._parms.get("model_algorithm")
 

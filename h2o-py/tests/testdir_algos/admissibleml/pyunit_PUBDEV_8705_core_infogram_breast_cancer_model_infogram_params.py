@@ -8,11 +8,12 @@ sys.path.insert(1, os.path.join("..","..",".."))
 import h2o
 from tests import pyunit_utils
     
-def test_infogram_german_data():
+def test_infogram_breast_cancer():
     """
     Simple breast cancer data test to check that core infogram is working:
-     1. it generates the correct lists as Deep's original code.  
+     1. cmi/relevance in Frame equals to those passed in model.output. 
      2. when model and infogram parameters are specified, it uses the correct specification.
+     3. cmi/relevance from Deep code aggree with ours.
     :return: 
     """
     deep_rel = [0.0040477989, 0.0974455315, 0.0086303713, 0.0041002103, 0.0037914745,
@@ -51,20 +52,9 @@ def test_infogram_german_data():
     x, cmi_gbm_glm = infogram_model_gbm_glm.get_all_predictor_cmi()
     assert abs(cmi_gbm_glm[1]-cmi[1]) > 0.01, "CMI from infogram model with gbm using different number of trees should" \
                                               " be different but are not."
-    
-def assert_list_frame_equal(cmi, rel, predictor_rel_cmi_frame, tol=1e-6):
-    rel_frame = predictor_rel_cmi_frame["Relevance"].as_data_frame(use_pandas=False)
-    cmi_frame = predictor_rel_cmi_frame["CMI"].as_data_frame(use_pandas=False)
-    count = 1
-    for one_cmi in cmi:
-        assert abs(float(cmi_frame[count][0])-one_cmi) < tol, "expected: {0}, actual: {1} and they are " \
-                                                              "different".format(float(cmi_frame[count][0]), one_cmi) 
-        assert abs(float(rel_frame[count][0])-rel[count-1]) < tol, "expected: {0}, actual: {1} and they are " \
-                                                                   "different".format(float(rel_frame[count][0]), rel[count-1])
-        count += 1
 
 
 if __name__ == "__main__":
-    pyunit_utils.standalone_test(test_infogram_german_data)
+    pyunit_utils.standalone_test(test_infogram_breast_cancer)
 else:
-    test_infogram_german_data()
+    test_infogram_breast_cancer()

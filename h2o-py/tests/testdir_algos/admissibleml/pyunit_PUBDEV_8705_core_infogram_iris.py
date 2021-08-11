@@ -40,10 +40,11 @@ def test_infogram_iris():
     # check admissible features values >= 0.1
     admissible_rel = infogram_model.get_admissible_relevance()
     admissible_cmi = infogram_model.get_admissible_cmi()
-    assert admissible_rel >= 0.1, "Admissible relevance should equal or exceed 0.1 but is not.  Actual admissible" \
-                                  " relevance is {0}".format(admissible_rel)
-    assert admissible_cmi >= 0.1, "Admissible cmi should equal or exceed 0.1 but is not.  Actual admissible" \
-                                  " cmi is {0}".format(admissible_cmi)
+    for index in range(0, len(admissible_rel)):
+        assert admissible_rel[index] >= 0.1, "Admissible relevance should equal or exceed 0.1 but is not.  Actual admissible" \
+                                      " relevance is {0}".format(admissible_rel[index])
+        assert admissible_cmi[index] >= 0.1, "Admissible cmi should equal or exceed 0.1 but is not.  Actual admissible cmi" \
+                                      " is {0}".format(admissible_cmi[index])
     
 
 def assert_list_frame_equal(cmi, rel, predictor_rel_cmi_frame, tol=1e-6):

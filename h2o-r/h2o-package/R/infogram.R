@@ -70,7 +70,7 @@
 #'        make sure you specify model_algorithm not to AUTO or specify model_algorithm_params.  If you
 #'        specifymodel_algorithm_params but did not specify model_algorithm, a final gbm will be built with
 #'        parametersspecified in model_algorithm_params. Must be one of: "AUTO", "deeplearning", "drf", "gbm", "glm",
-#'        "xgboost".
+#'        "xgboost". Defaults to AUTO.
 #' @param model_algorithm_params parameters specified to the chosen final algorithm
 #' @param sensitive_attributes predictors that are to be excluded from model due to them being discriminatory or inappropriate for whatever
 #'        reason.

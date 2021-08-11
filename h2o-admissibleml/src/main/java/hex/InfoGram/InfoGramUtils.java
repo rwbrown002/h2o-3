@@ -128,19 +128,6 @@ public class InfoGramUtils {
     return extractedFrame;
   }
 
-  public static void buildAlgorithmParameters(InfoGramModel.InfoGramParameters parms) {
-
-  }
-
-  public static void copyAlgoParams(ModelBuilder builder, InfoGramModel.InfoGramParameters parms) {
-    String inputAlgoName = parms._infogram_algorithm.name();
-    String algoName = ModelBuilder.algoName(inputAlgoName);
-    String schemaDir = ModelBuilder.schemaDirectory(inputAlgoName);
-    int algoVersion = 3;
-    if (algoName.equals("SVD") || algoName.equals("Aggregator") || algoName.equals("StackedEnsemble")) algoVersion=99;
-    String paramSchemaName = schemaDir+algoName+"V"+algoVersion+"$"+ModelBuilder.paramName(inputAlgoName)+"V"+algoVersion;
-  }
-
   public static String[] generateModelDescription(String[] topKPredictors, String[] sensitive_attributes) {
     int numModel = topKPredictors.length+1;
     String[] modelNames = new String[numModel];

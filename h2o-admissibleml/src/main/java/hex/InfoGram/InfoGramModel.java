@@ -70,7 +70,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
   public static class InfoGramParameters extends Model.Parameters {
     public Algorithm _infogram_algorithm = Algorithm.gbm;     // default to GBM
     public String _infogram_algorithm_params = new String();   // store user specific parameters for chosen algorithm
-    public Algorithm _model_algorithm = null; // default to GBM to build final model
+    public Algorithm _model_algorithm = Algorithm.AUTO; // default to AUTO which will be GBM to build final model
     public String _model_algorithm_params = new String();   // store user specific parameters for chosen algorithm
     public String[] _sensitive_attributes = null;     // store sensitive features to be excluded from final model
     public double _conditional_info_threshold = 0.1;  // default set by Deep
@@ -165,6 +165,7 @@ public class InfoGramModel extends Model<InfoGramModel, InfoGramModel.InfoGramPa
           excludeList.add("_distribution");
           setGLMFamilyParams((GLMModel.GLMParameters) params, this);
           break;
+        case AUTO: // auto defaults to GBM
         case gbm:
           paramsSchema = new GBMV3.GBMParametersV3();
           params = new GBMModel.GBMParameters();
