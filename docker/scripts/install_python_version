@@ -45,9 +45,9 @@ for python_version in "${array[@]}"; do
   echo "###### Installing pip for Python ${python_version} ######"
   if [[ ${major} == "2" ]]
   then
-    DEBIAN_FRONTEND=noninteractive apt-get install python-pip
+    DEBIAN_FRONTEND=noninteractive apt-get -y install python-pip
   else
-    DEBIAN_FRONTEND=noninteractive apt-get install python3-pip
+    DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip
   fi
 
   echo "###### Creating Virtualenv for Python ${python_version} ######"
