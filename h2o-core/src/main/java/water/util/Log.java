@@ -1,6 +1,5 @@
 package water.util;
 
-import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import water.H2O;
 import water.persist.PersistManager;
@@ -283,7 +282,6 @@ abstract public class Log {
         H2O.exit(1);
         throw new IllegalStateException("Shouldn't reach this - exit should exit the application");
       }
-      logger.setLevel(Level.INFO);
       _logger = logger;
     }
     return _logger;
