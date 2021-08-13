@@ -82,7 +82,8 @@ public class ModelingStepsRegistry extends Iced<ModelingStepsRegistry> {
                 orderedSteps.addAll(Arrays.asList(toAdd));
             }
         }
-        return orderedSteps.toArray(new ModelingStep[0]);
+        // FIXME: Do not sort if the modeling plan was provided by the user
+        return orderedSteps.stream().sorted((step1, step2) -> step1._priorityGroup - step2._priorityGroup).toArray(ModelingStep[]::new);
     }
 
     public StepDefinition[] createDefinitionPlanFromSteps(ModelingStep[] steps) {

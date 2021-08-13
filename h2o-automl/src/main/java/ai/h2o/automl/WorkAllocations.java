@@ -26,12 +26,14 @@ public class WorkAllocations extends Iced<WorkAllocations> {
     IAlgo _algo;
     JobType _type;
     int _weight;
+    int _priorityGroup;
 
-    Work(String id, IAlgo algo, JobType type, int weight) {
+    Work(String id, IAlgo algo, JobType type, int weight, int priorityGroup) {
       this._algo = algo;
       this._type = type;
       this._id = id;
       this._weight = weight;
+      this._priorityGroup = priorityGroup;
     }
 
     public int consume() {

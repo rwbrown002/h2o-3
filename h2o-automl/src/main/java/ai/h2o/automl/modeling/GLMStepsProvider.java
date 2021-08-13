@@ -21,7 +21,7 @@ public class GLMStepsProvider
         static abstract class GLMModelStep extends ModelingStep.ModelStep<GLMModel> {
 
             GLMModelStep(String id, int weight, AutoML autoML) {
-                super(Algo.GLM, id, weight, autoML);
+                super(Algo.GLM, id, weight,10, autoML);
             }
 
             @Override

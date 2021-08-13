@@ -40,7 +40,7 @@ def test_exclude_algos():
     aml.train(y=ds.target, training_frame=ds.train, validation_frame=ds.valid)
     _, non_se, se = get_partitioned_model_names(aml.leaderboard)
     assert not any(['DRF' in name or 'GLM' in name for name in non_se])
-    assert len(se) == 2
+    assert len(se) >= 1
 
 
 def test_include_algos():
@@ -179,6 +179,7 @@ def test_modeling_plan_using_simplified_syntax():
                     ],
                     seed=1)
     aml.train(y=ds.target, training_frame=ds.train)
+    print(aml.leaderboard)
     _, non_se, se = get_partitioned_model_names(aml.leaderboard)
     assert len(non_se) == 3
     assert len(se) == 1
@@ -217,12 +218,19 @@ def test_modeling_steps():
                     seed=1)
     aml.train(y=ds.target, training_frame=ds.train)
     print(aml.leaderboard)
+    print(aml.modeling_steps )
     assert aml.modeling_steps == [
-        dict(name='DRF', steps=[dict(id='def_1', weight=10), dict(id='XRT', weight=10)]),
-        dict(name='GLM', steps=[dict(id='def_1', weight=10)]),
-        dict(name='GBM', steps=[dict(id='grid_1', weight=77)]),
-        dict(name='StackedEnsemble', steps=[dict(id='best', weight=10), dict(id='all', weight=10)]),
+        {'name': 'DRF', 'steps': [{'id': 'def_1', 'weight': 10}, {'id': 'XRT', 'weight': 10}]},
+        {'name': 'GLM', 'steps': [{'id': 'def_1', 'weight': 10}]},
+        {'name': 'GBM', 'steps': [{'id': 'grid_1', 'weight': 77}]},
+        {'name': 'StackedEnsemble', 'steps': [{'id': 'best10', 'weight': 10}, {'id': 'all10', 'weight': 10}]}
     ]
+    # assert aml.modeling_steps == [
+    #     dict(name='DRF', steps=[dict(id='def_1', weight=10), dict(id='XRT', weight=10)]),
+    #     dict(name='GLM', steps=[dict(id='def_1', weight=10)]),
+    #     dict(name='GBM', steps=[dict(id='grid_1', weight=77)]),
+    #     dict(name='StackedEnsemble', steps=[dict(id='best', weight=10), dict(id='all', weight=10)]),
+    # ]
 
     new_aml = H2OAutoML(project_name="py_reinject_modeling_steps",
                         max_models=5,
@@ -384,7 +392,7 @@ def test_exploitation_impacts_exploration_duration():
     # assert 'start_XGBoost_lr_search' in aml.training_info
     exploitation_start = int(aml.training_info['start_GBM_lr_annealing'])
     exploration_duration = exploitation_start - automl_start
-    se_start = int(aml.training_info['start_StackedEnsemble_best'])
+    se_start = int(aml.training_info['start_StackedEnsemble_best10'])
     exploitation_duration = se_start - exploitation_start
     # can't reliably check duration ratio
     assert 0 < exploration_duration < planned_duration
