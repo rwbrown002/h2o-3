@@ -43,15 +43,15 @@ for python_version in "${array[@]}"; do
   rm -rf /var/cache/apt/*
 
   echo "###### Installing pip for Python ${python_version} ######"
-  if [[ ${major} == "2" ]]
+  if [[ ${major} == "2" ]] || [[ ${python_version} == "3.5" ]]
   then
-    DEBIAN_FRONTEND=noninteractive apt-get -y install python-pip
+    python${python_version} -m easy_install 'pip<21'
+  elif [[ ${python_version} == "3.8" ]]
+  then
+    python${python_version} -m easy_install pip
   else
     DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip
   fi
-
-  echo "###### Upgrading pip for Python ${python_version} ######"
-  python${python_version} -m pip install --upgrade pip
 
   echo "###### Creating Virtualenv for Python ${python_version} ######"
   python${python_version} -m pip install virtualenv
