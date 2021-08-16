@@ -50,6 +50,9 @@ for python_version in "${array[@]}"; do
     DEBIAN_FRONTEND=noninteractive apt-get -y install python3-pip
   fi
 
+  echo "###### Upgrading pip for Python ${python_version} ######"
+  python${python_version} -m pip install --upgrade pip
+
   echo "###### Creating Virtualenv for Python ${python_version} ######"
   python${python_version} -m pip install virtualenv
   mkdir -p /envs/h2o_env_python${python_version}
